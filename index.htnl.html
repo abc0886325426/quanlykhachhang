@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản Lý Khách Hàng</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 32px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .search-box {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        .search-box input {
+            padding: 8px 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 250px;
+        }
+        .form-box {
+            margin-bottom: 24px;
+            background: #f6faff;
+            padding: 16px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .form-box input {
+            padding: 6px 10px;
+            font-size: 15px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+        }
+        .form-box button {
+            padding: 7px 18px;
+            font-size: 15px;
+            border: none;
+            border-radius: 4px;
+            background: #3498db;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .form-box button:hover {
+            background: #217dbb;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fafafa;
+        }
+        th, td {
+            border: 1px solid #d0d0d0;
+            padding: 10px 8px;
+            text-align: left;
+        }
+        th {
+            background: #e1eafc;
+            color: #2c3e50;
+        }
+        tr:nth-child(even) {
+            background: #f6faff;
+        }
+        tr:hover {
+            background: #d2e6ff;
+        }
+        .action-btn {
+            padding: 4px 10px;
+            margin: 0 2px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .edit-btn {
+            background: #f1c40f;
+            color: #fff;
+        }
+        .edit-btn:hover {
+            background: #d4ac0d;
+        }
+        .delete-btn {
+            background: #e74c3c;
+            color: #fff;
+        }
+        .delete-btn:hover {
+            background: #b03a2e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quản Lý Khách Hàng</h1>
+        <div class="form-box">
+            <input type="text" id="nameInput" placeholder="Tên khách hàng">
+            <input type="text" id="phoneInput" placeholder="Số điện thoại">
+            <input type="text" id="addressInput" placeholder="Địa chỉ">
+            <input type="text" id="noteInput" placeholder="Ghi chú">
+            <button id="addBtn">Thêm</button>
+            <button id="updateBtn" style="display:none;">Cập nhật</button>
+            <button id="cancelBtn" style="display:none;">Hủy</button>
+        </div>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Tìm theo tên hoặc số điện thoại...">
+        </div>
+        <table id="customerTable">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Tên khách hàng</th>
+                    <th>Số điện thoại</th>
+                    <th>Địa chỉ</th>
+                    <th>Ghi chú</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="customerTbody">
+                <!-- Dữ liệu sẽ được render bằng JS -->
+            </tbody>
+        </table>
+    </div>
+    <script>
+        // Dữ liệu mẫu
+        let customers = [
+            { name: "Nguyễn Văn A", phone: "0912345678", address: "Hà Nội", note: "Khách VIP" },
+            { name: "Trần Thị B", phone: "0987654321", address: "TP.HCM", note: "" },
+            { name: "Lê Văn C", phone: "0909123456", address: "Đà Nẵng", note: "Mới" }
+        ];
+        let editingIndex = null;
+
+        function renderTable(filter = "") {
+            const tbody = document.getElementById('customerTbody');
+            tbody.innerHTML = "";
+            let filtered = customers.filter(c =>
+                c.name.toLowerCase().includes(filter) ||
+                c.phone.toLowerCase().includes(filter)
+            );
+            filtered.forEach((c, idx) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td>${c.name}</td>
+                    <td>${c.phone}</td>
+                    <td>${c.address}</td>
+                    <td>${c.note}</td>
+                    <td>
+                        <button class="action-btn edit-btn" onclick="editCustomer(${getCustomerIndex(c)})">Sửa</button>
+                        <button class="action-btn delete-btn" onclick="deleteCustomer(${getCustomerIndex(c)})">Xóa</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getCustomerIndex(customer) {
+            // Tìm index thực trong mảng customers (dùng cho sửa/xóa)
+            return customers.indexOf(customer);
+        }
+
+        // Sử dụng localStorage để lưu dữ liệu khách hàng
+        const STORAGE_KEY = "datakhachhang";
+
+        // Hàm kiểm tra và khởi tạo file lưu (localStorage)
+        function initCustomerData() {
+            if (!localStorage.getItem(STORAGE_KEY)) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(customers));
+            } else {
+                customers = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            }
+        }
+
+        // Hàm lưu dữ liệu vào localStorage
+        function saveCustomerData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(customers));
+        }
+
+        // Thêm khách hàng
+        document.getElementById('addBtn').onclick = function() {
+            const name = document.getElementById('nameInput').value.trim();
+            const phone = document.getElementById('phoneInput').value.trim();
+            const address = document.getElementById('addressInput').value.trim();
+            const note = document.getElementById('noteInput').value.trim();
+            if (!name || !phone) {
+                alert("Vui lòng nhập tên và số điện thoại!");
+                return;
+            }
+            customers.push({ name, phone, address, note });
+            saveCustomerData();
+            clearForm();
+            renderTable(document.getElementById('searchInput').value.toLowerCase());
+        };
+
+        // Sửa khách hàng
+        window.editCustomer = function(index) {
+            editingIndex = index;
+            const c = customers[index];
+            document.getElementById('nameInput').value = c.name;
+            document.getElementById('phoneInput').value = c.phone;
+            document.getElementById('addressInput').value = c.address;
+            document.getElementById('noteInput').value = c.note;
+            document.getElementById('addBtn').style.display = "none";
+            document.getElementById('updateBtn').style.display = "";
+            document.getElementById('cancelBtn').style.display = "";
+        };
+
+        document.getElementById('updateBtn').onclick = function() {
+            if (editingIndex === null) return;
+            const name = document.getElementById('nameInput').value.trim();
+            const phone = document.getElementById('phoneInput').value.trim();
+            const address = document.getElementById('addressInput').value.trim();
+            const note = document.getElementById('noteInput').value.trim();
+            if (!name || !phone) {
+                alert("Vui lòng nhập tên và số điện thoại!");
+                return;
+            }
+            customers[editingIndex] = { name, phone, address, note };
+            saveCustomerData();
+            editingIndex = null;
+            clearForm();
+            renderTable(document.getElementById('searchInput').value.toLowerCase());
+            document.getElementById('addBtn').style.display = "";
+            document.getElementById('updateBtn').style.display = "none";
+            document.getElementById('cancelBtn').style.display = "none";
+        };
+
+        document.getElementById('cancelBtn').onclick = function() {
+            editingIndex = null;
+            clearForm();
+            document.getElementById('addBtn').style.display = "";
+            document.getElementById('updateBtn').style.display = "none";
+            document.getElementById('cancelBtn').style.display = "none";
+        };
+
+        // Xóa khách hàng
+        window.deleteCustomer = function(index) {
+            if (confirm("Bạn có chắc muốn xóa khách hàng này?")) {
+                customers.splice(index, 1);
+                saveCustomerData();
+                renderTable(document.getElementById('searchInput').value.toLowerCase());
+            }
+        };
+
+        // Tìm kiếm
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            renderTable(this.value.toLowerCase());
+        });
+
+        function clearForm() {
+            document.getElementById('nameInput').value = "";
+            document.getElementById('phoneInput').value = "";
+            document.getElementById('addressInput').value = "";
+            document.getElementById('noteInput').value = "";
+        }
+
+        // Focus vào ô họ tên khi tải trang và khởi tạo dữ liệu
+        window.onload = function() {
+            initCustomerData();
+            document.getElementById('nameInput').focus();
+            renderTable();
+        };
+
+        // Khi nhập xong họ tên, bấm Enter sẽ nhảy qua ô số điện thoại
+        document.getElementById('nameInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('phoneInput').focus();
+            }
+        });
+        // Khi nhập xong số điện thoại, bấm Enter sẽ nhảy qua ô địa chỉ
+        document.getElementById('phoneInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('addressInput').focus();
+            }
+        });
+        // Khi nhập xong địa chỉ, bấm Enter sẽ nhảy qua ô ghi chú
+        document.getElementById('addressInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('noteInput').focus();
+            }
+        });
+        // Khi nhập xong ghi chú, bấm Enter sẽ nhảy qua nút Thêm hoặc Cập nhật
+        document.getElementById('noteInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (document.getElementById('addBtn').style.display !== "none") {
+                    document.getElementById('addBtn').focus();
+                } else {
+                    document.getElementById('updateBtn').focus();
+                }
+            }
+        });
+
+        // Dữ liệu khách hàng hiện tại chỉ lưu trên bộ nhớ tạm (RAM) của trình duyệt.
+        // Khi bạn tải lại trang, dữ liệu sẽ trở về mặc định ban đầu (3 khách hàng mẫu).
+        // Nếu muốn lưu lâu dài, bạn có thể dùng localStorage hoặc lưu vào server.
+
+        // Dữ liệu khách hàng nhập vào đang được lưu trong localStorage của trình duyệt
+        // với key là "datakhachhang". Không có file vật lý trên máy tính, chỉ lưu trên trình duyệt.
+        // Nếu bạn xóa cache hoặc dùng trình duyệt khác thì dữ liệu sẽ mất.
+    </script>
+</body>
+</html>
